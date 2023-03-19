@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <img src="https://raw.githubusercontent.com/ecoemission/ecoemission.github.io/main/Ekran%20Resmi%202023-02-16%2017.41.56%20kopyası.png" alt="image" hight="100" width="100">
+  <head>
+    <title>Calculateur d'empreinte carbone</title>
+  </head>
+    <h3>équipe ecoemissionsx</h3>
+  <body>
+    <h1>Calculateur d'empreinte carbone</h1>
+    <form>
+      <label for="carMiles">Distance parcourue en voiture (km par an) :</label>
+      <input type="number" id="carMiles"><br>
+
+      <label for="carFuelEfficiency">Consommation de carburant de la voiture (litres aux 100 km) :</label>
+      <input type="number" id="carFuelEfficiency" step="any"><br>
+
+      <label for="publicTransportMiles">Distance parcourue en transports en commun (bus, métro, etc.) (km par an) :</label>
+      <input type="number" id="publicTransportMiles"><br>
+
+      <label for="planeMiles">Distance parcourue en avion (km par an) :</label>
+      <input type="number" id="planeMiles"><br>
+
+      <label for="trainMiles">Distance parcourue en train (km par an) :</label>
+      <input type="number" id="trainMiles"><br>
+
+      <label for="electricity">Consommation d'électricité (kWh par mois) :</label>
+      <input type="number" id="electricity"><br>
+
+      <label for="gas">Consommation de gaz naturel (m3 par mois) :</label>
+      <input type="number" id="gas"><br>
+
+      <label for="meat">Combien de repas contenant de la viande consommez-vous par semaine ?</label>
+      <input type="number" id="meat"><br>
+
+      <label for="dairy">Combien de repas contenant des produits laitiers consommez-vous par semaine ?</label>
+      <input type="number" id="dairy"><br>
+
+      <!-- Add more questions as required -->
+
+      <button type="button" onclick="calculateFootprint()">Calcule</button>
+    </form>
+
+    <h2>Votre empreinte carbone: <span id="result"></span></h2>
+    <p id="advice"></p>
+    <script>
+      function calculateFootprint() {
+        const carMiles = document.getElementById("carMiles").value;
+        const carFuelEfficiency = document.getElementById("carFuelEfficiency").value;
+        const publicTransportMiles = document.getElementById("publicTransportMiles").value;
+        const planeMiles = document.getElementById("planeMiles").value;
+        const trainMiles = document.getElementById("trainMiles").value;
+        const electricity = document.getElementById("electricity").value;
+        const gas = document.getElementById("gas").value;
+        const meat = document.getElementById("meat").value;
+        const dairy = document.getElementById("dairy").value;
+
+        // Add more variables for additional questions
+
+        // Calculate CO2 emissions for each aspect
+        const carEmissions = carMiles * carFuelEfficiency * 0.02359;
+        const publicTransportEmissions = publicTransportMiles * 0.089; // Average emissions for public transport
+        const planeEmissions = planeMiles * 0.115; // Average emissions for air travel
+        const trainEmissions = trainMiles * 0.041; // Average emissions for train travel
+        const electricityEmissions = electricity * 0.0006 * 12; // 0.6 lbs of CO2 per kWh, converted to kg and annual
+        const gasEmissions = gas * 1.89 * 12; // 1.89 kg of CO2 per m3, annual
+        const meatEmissions = meat * 5.6 * 52; // 5.6 kg of CO2 per meat meal per week, annual
+        const dairyEmissions = dairy * 1.9 * 52; // 1.9 kg of CO2 per dairy meal per week, annual
+
+        // Calculate total CO2 emissions
+        const totalEmissions = carEmissions + publicTransportEmissions + planeEmissions + trainEmissions + electricityEmissions + gasEmissions + meatEmissions + dairyEmissions;
+        document.getElementById("result").innerText = totalEmissions.toFixed(2) + " kg de CO2 par an";
+
+        // Provide advice based on the calculated emissions
+        if (totalEmissions > 10000) {
+          document.getElementById("advice").innerText = "Votre empreinte carbone est élevée. Envisagez de réduire votre consommation d'électricité, de conduire moins, d'utiliser les transports en commun, de réduire vos voyages en avion et d'avoir une alimentation à base de plantes.";
+        } else {
+          document.getElementById("advice").innerText = "Votre empreinte carbone est relativement faible. Continuez votre bon travail!";
+        }
+      }
+    </script>
+  </body>
+</html>
