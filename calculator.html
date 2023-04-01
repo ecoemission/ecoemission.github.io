@@ -134,10 +134,11 @@
       <button type="button" onclick="calculateFootprint()">Calcule</button>
       <button class="refresh-button" onclick="location.reload();">Refresh Page</button>
     </form>
-
-    <h2>Votre empreinte carbone: <span id="result"></span></h2>
-    <p id="advice"></p>
-    <p class="back-link"><a href="user.html">&larr; Retour à la première page</a></p>
+    <div class="result-box">
+      <h2>Votre empreinte carbone: <span id="result"></span></h2>
+      <p id="advice"></p>
+      <p class="back-link"><a href="user.html">&larr; Retour à la première page</a></p>
+    </div>
   </div>
   <script>
     function calculateFootprint() {
