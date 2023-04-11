@@ -66,6 +66,8 @@
     <div id="result"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
     <script>
+        const productInfoElement = document.getElementById("result");
+
         Quagga.init({
             inputStream: {
                 name: "Live",
@@ -85,11 +87,96 @@
 
         Quagga.onDetected(function (result) {
             console.log("Decoded barcode:", result.codeResult.code);
-            document.getElementById("result").innerHTML = "Decoded barcode: " + result.codeResult.code;
+            productInfoElement.innerHTML = "Decoded barcode: " + result.codeResult.code;
 
             // Stop scanning after the first result
             Quagga.stop();
+
+            // Get product information
+            getProductInfo(result.codeResult.code);
         });
+
+        function getProductInfo(barcode) {
+            fetch('https://world.openfoodfacts.org/api/v0/product/' + barcode + '.json')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('API response:', data);
+
+                    if (data.status === 1 && data.product) {
+                        const productName = data.product.product_name || data.product.product_name_en || data.product.product_name_fr;
+                        const carbonFootprint = estimateCarbonFootprint(data.product);
+                        if (productName) {
+                            productInfoElement.innerHTML = 'Product name: ' + productName + '<br>' + 'Estimated Carbon Footprint: ' + carbonFootprint;
+                        } else {
+                            productInfoElement.innerHTML = 'Product name not found.';
+                        }
+                    } else {
+                        productInfoElement.innerHTML = 'Product information not found.';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching product information:', error);
+                    productInfoElement.innerHTML = 'Error fetching product information.';
+                });
+        }
+        function estimateCarbonFootprint(product) {
+    const ecoScore = product.ecoscore_grade;
+    const packaging = product.packaging;
+    const origins = product.origins;
+
+    let ecoScoreImpact = 'Unknown';
+    let packagingImpact = 'Unknown';
+    let transportationImpact = 'Unknown';
+
+    if (ecoScore) {
+        switch (ecoScore) {
+            case 'a':
+                ecoScoreImpact = 'Very Low';
+                break;
+            case 'b':
+                ecoScoreImpact = 'Low';
+                break;
+            case 'c':
+                ecoScoreImpact = 'Medium';
+                break;
+            case 'd':
+                ecoScoreImpact = 'High';
+                break;
+            case 'e':
+                ecoScoreImpact = 'Very High';
+                break;
+            default:
+                ecoScoreImpact = 'Unknown';
+        }
+    }
+
+    if (packaging) {
+        if (packaging.toLowerCase().includes('recyclable') || packaging.toLowerCase().includes('biodegradable')) {
+            packagingImpact = 'Low';
+        } else {
+            packagingImpact = 'High';
+        }
+    }
+
+    if (origins) {
+        const originsArray = origins.split(',').map(origin => origin.trim().toLowerCase());
+        if (originsArray.includes('local') || originsArray.includes('regional')) {
+            transportationImpact = 'Low';
+        } else {
+            transportationImpact = 'High';
+        }
+    }
+
+    return {
+        ecoScore: ecoScoreImpact,
+        packaging: packagingImpact,
+        transportation: transportationImpact,
+    };
+}
+
     </script>
 </body>
 </html>
+
+
+
