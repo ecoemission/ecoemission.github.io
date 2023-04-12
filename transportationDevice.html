@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transportation Mode Detection</title>
+</head>
+<body>
+    <h1>Transportation Mode Detection</h1>
+    <div id="result">Detecting...</div>
+    <script>
+        const resultElement = document.getElementById("result");
+
+        // Access geolocation data
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(handlePositionUpdate);
+        } else {
+            resultElement.innerHTML = "Geolocation is not supported by this browser.";
+        }
+
+        // Access accelerometer data
+        if ('LinearAccelerationSensor' in window) {
+            const sensor = new LinearAccelerationSensor();
+            sensor.addEventListener('reading', handleAccelerationUpdate);
+            sensor.start();
+        } else {
+            resultElement.innerHTML = "Accelerometer is not supported by this device.";
+        }
+
+        let prevPosition = null;
+        let speed = 0;
+        let accelerationMagnitude = 0;
+
+        function handlePositionUpdate(position) {
+            if (prevPosition) {
+                const distance = haversineDistance(
+                    prevPosition.coords.latitude, prevPosition.coords.longitude,
+                    position.coords.latitude, position.coords.longitude
+                );
+                const timeDelta = (position.timestamp - prevPosition.timestamp) / 1000;
+                speed = distance / timeDelta;
+            }
+            prevPosition = position;
+            updateTransportationMode();
+        }
+
+        function handleAccelerationUpdate(event) {
+            accelerationMagnitude = Math.sqrt(
+                event.accelerationX * event.accelerationX +
+                event.accelerationY * event.accelerationY +
+                event.accelerationZ * event.accelerationZ
+            );
+            updateTransportationMode();
+        }
+
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c;
+        }
+
+        function updateTransportationMode() {
+            let mode = "Unknown";
+            if (accelerationMagnitude < 0.5) {
+                mode = "Standing still";
+            } else if (speed < 1) {
+                mode = "Walking";
+            } else if (speed < 4) {
+                mode = "Cycling";
+            } else if (speed < 15) {
+                mode = "Car";
+            } else if (speed < 60) {
+                mode = "Train or Metro";
+            } else if (speed >= 60) {
+                mode = "Plane";
+            }
+            resultElement.innerHTML = "Transportation mode: " + mode;
+        }
+    </script>
+</body>
+</html>
