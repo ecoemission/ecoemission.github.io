@@ -5,33 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barcode Scanner</title>
     <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #186A18;
-        }
-        header {
-            background-color: #ffffff;
-            padding: 20px;
-            width: 100%;
-            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-            color: #333;
-            text-align: center;
+       body {
+        background-color: #186A18;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
         }
         img {
             max-width: 100px;
             margin-bottom: 10px;
         }
+        header {
+            background-color: #ffffff;
+            padding: 20px;
+            color: rgb(0, 0, 0);
+            text-align: center;
+        }
         #scanner-container {
             position: relative;
             width: 640px;
             height: 480px;
-            margin-top: 30px;
-            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
         }
         #video {
             width: 100%;
@@ -45,12 +40,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-        #result {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 1.2em;
-            color: #333;
         }
     </style>
 </head>
@@ -68,115 +57,175 @@
     <script>
         const productInfoElement = document.getElementById("result");
 
-        Quagga.init({
-            inputStream: {
-                name: "Live",
-                type: "LiveStream",
-                target: document.querySelector("#scanner-container"),
-            },
-            decoder: {
-                readers: ["ean_reader", "ean_8_reader", "code_128_reader"],
-            },
-        }, function (error) {
-            if (error) {
-                console.error(error);
-                return;
+Quagga.init({
+    inputStream: {
+        name: "Live",
+        type: "LiveStream",
+        target: document.querySelector("#scanner-container"),
+    },
+    decoder: {
+        readers: ["ean_reader", "ean_8_reader", "code_128_reader"],
+    },
+}, function (error) {
+    if (error) {
+        console.error(error);
+        return;
+    }
+    Quagga.start();
+});
+Quagga.onDetected(function (result) {
+    console.log("Decoded barcode:", result.codeResult.code);
+    productInfoElement.innerHTML = "Decoded barcode: " + result.codeResult.code;
+
+    // Stop scanning after the first result
+    Quagga.stop();
+
+    // Get product information
+    getProductInfo(result.codeResult.code);
+});
+
+function getProductInfo(barcode) {
+    fetch('https://world.openfoodfacts.org/api/v0/product/' + barcode + '.json')
+        .then(response => response.json())
+        .then(data => {
+            console.log('API response:', data);
+            if (data.status === 1 && data.product) {
+                const productName = data.product.product_name || data.product.product_name_en || data.product.product_name_fr;
+                const carbonFootprint = estimateCarbonFootprint(data.product);
+                const impactDetails = getImpactDetails(data.product);
+                if (productName) {
+                    productInfoElement.innerHTML = 'Product name: ' + productName + '<br>' + 'Estimated Carbon Footprint: ' + carbonFootprint.toFixed(2) + ' kg CO2';
+                    productInfoElement.innerHTML += '<br>Eco-score impact: ' + impactDetails.ecoScore;
+                    productInfoElement.innerHTML += '<br>Packaging impact: ' + impactDetails.packaging;
+                    productInfoElement.innerHTML += '<br>Transportation impact: ' + impactDetails.transportation;
+                } else {
+                    productInfoElement.innerHTML = 'Product name not found.';
+                }
+            } else {
+                productInfoElement.innerHTML = 'Product information not found.';
             }
-            Quagga.start();
+        })
+        .catch(error => {
+            console.error('Error fetching product information:', error);
+            productInfoElement.innerHTML = 'Error fetching product information.';
         });
+}
 
-        Quagga.onDetected(function (result) {
-            console.log("Decoded barcode:", result.codeResult.code);
-            productInfoElement.innerHTML = "Decoded barcode: " + result.codeResult.code;
-
-            // Stop scanning after the first result
-            Quagga.stop();
-
-            // Get product information
-            getProductInfo(result.codeResult.code);
-        });
-
-        function getProductInfo(barcode) {
-            fetch('https://world.openfoodfacts.org/api/v0/product/' + barcode + '.json')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('API response:', data);
-
-                    if (data.status === 1 && data.product) {
-                        const productName = data.product.product_name || data.product.product_name_en || data.product.product_name_fr;
-                        const carbonFootprint = estimateCarbonFootprint(data.product);
-                        if (productName) {
-                            productInfoElement.innerHTML = 'Product name: ' + productName + '<br>' + 'Estimated Carbon Footprint: ' + carbonFootprint;
-                        } else {
-                            productInfoElement.innerHTML = 'Product name not found.';
-                        }
-                    } else {
-                        productInfoElement.innerHTML = 'Product information not found.';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching product information:', error);
-                    productInfoElement.innerHTML = 'Error fetching product information.';
-                });
-        }
-        function estimateCarbonFootprint(product) {
+function estimateCarbonFootprint(product) {
     const ecoScore = product.ecoscore_grade;
     const packaging = product.packaging;
     const origins = product.origins;
 
-    let ecoScoreImpact = 'Unknown';
-    let packagingImpact = 'Unknown';
-    let transportationImpact = 'Unknown';
+    let ecoScoreImpact = 0;
+    let packagingImpact = 0;
+    let transportationImpact = 0;
 
     if (ecoScore) {
         switch (ecoScore) {
             case 'a':
-                ecoScoreImpact = 'Very Low';
+                ecoScoreImpact = 1;
                 break;
             case 'b':
-                ecoScoreImpact = 'Low';
+                ecoScoreImpact = 2;
                 break;
             case 'c':
-                ecoScoreImpact = 'Medium';
+                ecoScoreImpact = 3;
                 break;
             case 'd':
-                ecoScoreImpact = 'High';
+                ecoScoreImpact = 4;
                 break;
             case 'e':
-                ecoScoreImpact = 'Very High';
+                ecoScoreImpact = 5;
                 break;
-            default:
-                ecoScoreImpact = 'Unknown';
+                default:
+                        ecoScoreImpact = 0;
+                }
+            }
+
+            if (packaging) {
+                if (packaging.toLowerCase().includes('recyclable') || packaging.toLowerCase().includes('biodegradable')) {
+                    packagingImpact = 1;
+                } else {
+                    packagingImpact = 2;
+                }
+            }
+
+            if (origins) {
+                const originsArray = origins.split(',').map(origin => origin.trim().toLowerCase());
+                if (originsArray.includes('local') || originsArray.includes('regional')) {
+                    transportationImpact = 1;
+                } else {
+                    transportationImpact = 2;
+                }
+            }
+
+            const totalImpact = (ecoScoreImpact + packagingImpact + transportationImpact) / 3;
+
+            // Convert total impact to a rough CO2 estimate (in kg)
+            const co2Estimate = totalImpact * 2; // Assuming 2 kg CO2 per impact unit (This is a rough approximation!)
+
+            return co2Estimate;
         }
-    }
 
-    if (packaging) {
-        if (packaging.toLowerCase().includes('recyclable') || packaging.toLowerCase().includes('biodegradable')) {
-            packagingImpact = 'Low';
-        } else {
-            packagingImpact = 'High';
+        function getImpactDetails(product) {
+            const ecoScore = product.ecoscore_grade;
+            const packaging = product.packaging;
+            const origins = product.origins;
+
+            let ecoScoreImpact = 'Unknown';
+            let packagingImpact = 'Unknown';
+            let transportationImpact = 'Unknown';
+
+            if (ecoScore) {
+                switch (ecoScore) {
+                    case 'a':
+                        ecoScoreImpact = 'Very Low';
+                        break;
+                    case 'b':
+                        ecoScoreImpact = 'Low';
+                        break;
+                    case 'c':
+                        ecoScoreImpact = 'Medium';
+                        break;
+                    case 'd':
+                        ecoScoreImpact = 'High';
+                        break;
+                    case 'e':
+                        ecoScoreImpact = 'Very High';
+                        break;
+                    default:
+                        ecoScoreImpact = 'Unknown';
+                }
+            }
+
+            if (packaging) {
+                if (packaging.toLowerCase().includes('recyclable') || packaging.toLowerCase().includes('biodegradable')) {
+                    packagingImpact = 'Low';
+                } else {
+                    packagingImpact = 'High';
+                }
+            }
+
+            if (origins) {
+                const originsArray = origins.split(',').map(origin => origin.trim().toLowerCase());
+                if (originsArray.includes('local') || originsArray.includes('regional')) {
+                    transportationImpact = 'Low';
+                } else {
+                    transportationImpact = 'High';
+                }
+            }
+
+            return {
+                ecoScore: ecoScoreImpact,
+                packaging: packagingImpact,
+                transportation: transportationImpact,
+            };
         }
-    }
-
-    if (origins) {
-        const originsArray = origins.split(',').map(origin => origin.trim().toLowerCase());
-        if (originsArray.includes('local') || originsArray.includes('regional')) {
-            transportationImpact = 'Low';
-        } else {
-            transportationImpact = 'High';
-        }
-    }
-
-    return {
-        ecoScore: ecoScoreImpact,
-        packaging: packagingImpact,
-        transportation: transportationImpact,
-    };
-}
-
     </script>
 </body>
 </html>
+            
+ 
 
 
 
