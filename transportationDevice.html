@@ -19,12 +19,27 @@
         }
 
         // Access accelerometer data
-        if ('LinearAccelerationSensor' in window) {
-            const sensor = new LinearAccelerationSensor();
-            sensor.addEventListener('reading', handleAccelerationUpdate);
-            sensor.start();
+        if ('DeviceMotionEvent' in window) {
+            requestDeviceMotionPermission();
         } else {
             resultElement.innerHTML = "Accelerometer is not supported by this device.";
+        }
+
+        function requestDeviceMotionPermission() {
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('devicemotion', handleDeviceMotion);
+                        } else {
+                            resultElement.innerHTML = "Accelerometer permission not granted.";
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Non-iOS 13+ devices
+                window.addEventListener('devicemotion', handleDeviceMotion);
+            }
         }
 
         let prevPosition = null;
@@ -44,11 +59,12 @@
             updateTransportationMode();
         }
 
-        function handleAccelerationUpdate(event) {
+        function handleDeviceMotion(event) {
+            const acceleration = event.acceleration;
             accelerationMagnitude = Math.sqrt(
-                event.accelerationX * event.accelerationX +
-                event.accelerationY * event.accelerationY +
-                event.accelerationZ * event.accelerationZ
+                acceleration.x * acceleration.x +
+                acceleration.y * acceleration.y +
+                acceleration.z * acceleration.z
             );
             updateTransportationMode();
         }
@@ -79,10 +95,10 @@
             } else if (speed < 15) {
                 mode = "Car";
             } else if (speed < 60) {
-                mode = "Train or Metro";
+                mode = "Metro or train"
             } else if (speed >= 60) {
-                mode = "Plane";
-            }
+                mode = "plaine"
+
             resultElement.innerHTML = "Transportation mode: " + mode;
         }
     </script>
